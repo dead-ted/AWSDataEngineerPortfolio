@@ -5,6 +5,8 @@ import yaml
 class ApplicationProps:
     account: str
     region: str
+    lf_admin_role_arn: str
+
 
     def __init__(self, path:str):
 
@@ -13,3 +15,4 @@ class ApplicationProps:
 
         self.account = config['account']
         self.region = config['region']
+        self.lf_admin_role_arn = config['lf_admin_role_arn']
