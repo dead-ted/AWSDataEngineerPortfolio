@@ -45,15 +45,16 @@ class DataLakeStack(Stack):
             managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name("AdministratorAccess")]
         )
 
-        lakeformation_admin = lf.CfnDataLakeSettings(
+        
+        lf.CfnDataLakeSettings(
             self,
-            "LakeFormationAdminSetting",
+            "DataLakeSettings",
             admins=[
                 lf.CfnDataLakeSettings.DataLakePrincipalProperty(
                     data_lake_principal_identifier=lf_admin_role.role_arn
                 )
             ]
-        )       
+        )     
 
         # for bucket in [processed_bucket, published_bucket]:
         #     lf.CfnResource(
