@@ -6,21 +6,15 @@ Now, I’m excited to build and share example projects here to showcase my skill
 
 ## Project Overview
 
-**AWSDataEngineerPortfolio** showcases end-to-end AWS data engineering projects, including serverless ETL pipelines, DynamoDB single-table design, GIS data processing with Athena, and S3 static website hosting. All infrastructure is deployed using AWS CDK, demonstrating scalable, cost-effective, and practical cloud-native data solutions.
+**AWSDataEngineerPortfolio** showcases end-to-end AWS data engineering projects, including serverless ETL pipelines, DynamoDB single-table design, GIS data processing with Athena, and S3 static website hosting. All infrastructure is deployed using AWS CDK, demonstrating scalable, cost-effective, and practical cloud-native data solutions. The goal is also the make this demo run for a very minimal amount of cost.
 
 
-## CDK
+## Demo 1 - Data Lake
 
-The base configuration files for this project are stored in the `configs` folder at the root of the repository.
+### Overview
+This demo demonstrates a serverless three-tier data lake deployed using AWS CDK (Python).  
+It includes processes to ingest data from APIs and web sources into an S3-based data lake, with governance managed by AWS Lake Formation.   
+The CDK code sets up the data lake and Lake Formation, while permissions are configured in the AWS console and documented in the repository.   
+A simple static website hosted on S3 provides an end-to-end experience by accessing and displaying data from the data lake.
 
-When deploying the CDK stacks, you must provide a **context variable** to specify which configuration file to use.  
-Each configuration file is named using the following pattern:
-
-<deployment_name>_conf.yaml  
-
-The context variable name is:  
-deployment_stage
-
-### Example: Synthesizing the `dev` configuration
-```bash
-cdk synth -c deployment_stage=dev
+![Data Lake Architecture Overview](./demo_data_lake/diagrams/weather_project.drawio.png)
