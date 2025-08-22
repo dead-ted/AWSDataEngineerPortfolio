@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Objects in Table</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+    </head>
+    <body>
+
+    <h2>Posts</h2>
+    <table id="posts-table">
+        <thead>
+            <tr>
+                <th>Content</th>
+                <th>Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+        </tbody>
+    </table>
+
+    <h1>Submit Data</h1>
+
+    <div class="form-group">
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="content">Content:</label>
+        <textarea id="content" name="content" rows="4" required></textarea>
+    </div>
+    
+    <button id="submit-button">Submit</button>
+
+    <script>
+        // Function to fetch data from the API
+        async function fetchData() {
+            try {
+                const apiUrl = 'https://fk7qssnocc.execute-api.us-east-1.amazonaws.com/get_posts';
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer 88888'
+                        },
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                console.log(data)
+
+                // Populate the list with the data
+                const tableBody = document.querySelector('#posts-table tbody');
+                //set tableBody contents to no rows
+                tableBody.innerHTML = '';
+
+                data.forEach(item => {
+                    // Create a new table row
+                    const row = document.createElement('tr');
+
+                    // Create table cells for each property
+                    const titleCell = document.createElement('td');
+                    titleCell.textContent = item.title;
+
+                    const contentCell = document.createElement('td');
+                    contentCell.textContent = item.content;
+
+                    // Append cells to the row
+                    row.appendChild(titleCell);
+                    row.appendChild(contentCell);
+
+                    // Append the row to the table body
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('There was a problem with the fetch operation:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchData();
+
+        })
+
+        document.getElementById('submit-button').addEventListener('click', async () => {
+                const title = document.getElementById('title').value;
+                const content = document.getElementById('content').value;
+
+                // Prepare the data to send
+                const data = {
+                    title: title,
+                    content: content
+                };
+
+                // Define the API endpoint
+                const apiEndpoint = 'https://fk7qssnocc.execute-api.us-east-1.amazonaws.com/add_post'
+
+                try {
+                    // Send a POST request to the API
+                    const response = await fetch(apiEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer 88888'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    // Check if the response is okay
+                    if (response.ok) {
+                        fetchData();
+                    } else {
+                        console.error('Error:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            })
+    </script>
+</body>
+</html>

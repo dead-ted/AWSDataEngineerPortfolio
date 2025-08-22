@@ -3,26 +3,20 @@ import os
 
 import aws_cdk as cdk
 
-from demo_static_site.demo_static_site_stack import DemoStaticSiteStack
+from src.config.configuration_assets import ApplicationProps
+from src.stacks.static_site_stack import StaticSiteStack
 
 
 app = cdk.App()
-DemoStaticSiteStack(app, "DemoStaticSiteStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+deployment_stage = app.node.try_get_context("deployment_stage")
+if not deployment_stage:
+    raise ValueError("Deployment requires deployment_stage value to be set in context. Value currently missing.")
+configuration_path = f"configs/{deployment_stage}_config.yaml"
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+props = ApplicationProps(configuration_path)
+aws_env = cdk.Environment(account=props.account, region=props.region)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+StaticSiteStack(app, "StaticSiteStack", env=aws_env, props=props)
 
 app.synth()
