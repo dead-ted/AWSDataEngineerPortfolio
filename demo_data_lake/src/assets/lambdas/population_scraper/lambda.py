@@ -13,7 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 S3_BUCKET = os.environ.get("S3_BUCKET", "")
-S3_PATH = os.environ.get("S3_KEY", "")
+S3_PATH = os.environ.get("S3_PATH", "")
 DATA_URL = os.environ.get("DATA_URL", "")
 CHROME_DRIVER = os.environ.get("CHROME_DRIVER", "")
 CHROME_BINARY = os.environ.get("CHROME_BINARY", "")

@@ -5,6 +5,7 @@ import aws_cdk as cdk
 
 from src.stacks.example_stack import ExampleStack
 from src.stacks.data_lake_stack import DataLakeStack
+from src.stacks.etl_stack import EtlStack
 from src.config.configuration_assets import ApplicationProps
 
 
@@ -19,6 +20,8 @@ props = ApplicationProps(configuration_path)
 aws_env = cdk.Environment(account=props.account, region=props.region)
 
 DataLakeStack(app, "DataLakeStack", env=aws_env, props=props)
+
+EtlStack(app, "EtlStack", env=aws_env)
 
 ExampleStack(app, "ExampleStack", env=aws_env
     )

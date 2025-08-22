@@ -34,9 +34,9 @@ class DataLakeStack(Stack):
             auto_delete_objects=True
         )
 
-        CfnOutput(self, "LandingBucketName", value=landing_bucket.bucket_name)
-        CfnOutput(self, "ProcessedBucketName", value=processed_bucket.bucket_name)
-        CfnOutput(self, "PublishedBucketName", value=published_bucket.bucket_name)
+        CfnOutput(self, "LandingBucketName", value=landing_bucket.bucket_name, export_name="LandingBucketName")
+        CfnOutput(self, "ProcessedBucketName", value=processed_bucket.bucket_name, export_name="ProcessedBucketName")
+        CfnOutput(self, "PublishedBucketName", value=published_bucket.bucket_name, export_name="PublishedBucketName")
 
         lf_admin_role = iam.Role(
             self, "LFAdminRole",
