@@ -7,13 +7,15 @@ from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
-from aws_lambda_powertools.event_handler import APIGatewayHttpResolver, Response
+from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 
 logger = Logger(service="APP")
 tracer = Tracer(service="APP")
-app = APIGatewayHttpResolver()
 
 ddb_table_name = os.environ['DDB_TABLE_NAME']
+static_site_url = os.environ['STATIC_SITE_URL']
+
+app = APIGatewayHttpResolver()
 
 if os.environ.get('LOCAL') == 'true':
     endpoint_url = "http://localhost:8000"
@@ -139,11 +141,12 @@ def get_posts() -> list[Dict[str, str]]:
 @tracer.capture_lambda_handler
 def lambda_handler(event: dict, context: LambdaContext):
     logger.info(event)
-    return app.resolve(event, context)
+    res = app.resolve(event, context)
 
+    return res
 
 if __name__ == '__main__':
-    class LambdaContext:
+    class FakeLambdaContext:
         function_name: str = "my_lambda_function"
         function_version: str = "$LATEST"
         invoked_function_arn: str = "arn:aws:lambda:us-east-1:123456789012:function:my_lambda_function"
@@ -193,8 +196,3 @@ if __name__ == '__main__':
         "body": '',
         "isBase64Encoded": False
     }
-
-    if __name__ == '__main__':
-        context = LambdaContext()
-        response = lambda_handler(event, context)
-        x='break_here'

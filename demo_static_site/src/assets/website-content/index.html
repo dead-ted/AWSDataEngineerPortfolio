@@ -48,10 +48,23 @@
     <button id="submit-button">Submit</button>
 
     <script>
-        // Function to fetch data from the API
+        let apiGetUrl = '';
+        let apiPostUrl = '';
+   
+        async function loadConfig() {
+            try {
+                const response = await fetch('config/config.json');
+                if (!response.ok) throw new Error('Failed to load config.json');
+                const config = await response.json();
+                apiGetUrl = `${config.apiUrl}/get_posts`;
+                apiPostUrl = `${config.apiUrl}/add_post`;
+            } catch (err) {
+                console.error('Error loading config:', err);
+            }
+        }
         async function fetchData() {
             try {
-                const apiUrl = 'https://fk7qssnocc.execute-api.us-east-1.amazonaws.com/get_posts';
+                const apiUrl = apiGetUrl
                 const response = await fetch(apiUrl, {
                     method: 'GET',
                         headers: {
@@ -93,7 +106,8 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadConfig();
             fetchData();
 
         })
@@ -109,7 +123,7 @@
                 };
 
                 // Define the API endpoint
-                const apiEndpoint = 'https://fk7qssnocc.execute-api.us-east-1.amazonaws.com/add_post'
+                const apiEndpoint = apiPostUrl
 
                 try {
                     // Send a POST request to the API

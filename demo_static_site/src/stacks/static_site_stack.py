@@ -12,6 +12,9 @@ from aws_cdk import (
     aws_apigatewayv2_integrations as integrations,
     aws_apigatewayv2_authorizers as authorizers,
     aws_iam as iam,
+    custom_resources,
+    aws_cloudformation as cfn,
+    CustomResource
 )
 import os
 from constructs import Construct
@@ -41,22 +44,38 @@ class StaticSiteStack(Stack):
             )
         )
 
-        # Deploy static website content to the bucket
-        website_content_path = os.path.join(os.getcwd(), "src/assets/website-content")
-        s3_deployment.BucketDeployment(
+        stage_bucket = s3.Bucket(
             self, 
-            "DeployWebsite",
-            sources=[s3_deployment.Source.asset(website_content_path)],
-            destination_bucket=static_site_bucket
+            "StageBucket",
+            public_read_access=False,
+            removal_policy=RemovalPolicy.DESTROY,
+            block_public_access=s3.BlockPublicAccess(
+                block_public_acls=True,
+                ignore_public_acls=True,
+                block_public_policy=True,
+                restrict_public_buckets=True
+            )
         )
 
-        # Output the website URL
-        CfnOutput(
-            self, 
-            "BucketWebsiteURL",
-            value=static_site_bucket.bucket_website_url,
-            description="URL of the static website"
+        # Create an HTTP API Gateway
+        http_api = apigatewayv2.HttpApi(
+            self,
+            "StaticSiteBackendHTTPAPI",
+            api_name="staticSiteBackendHTTPAPI",
+            description="This is the backend for the static site using HTTP API Gateway.",
+            cors_preflight=apigatewayv2.CorsPreflightOptions(
+            allow_headers=[
+                "*"
+            ],
+            allow_methods=[apigatewayv2.CorsHttpMethod.GET, apigatewayv2.CorsHttpMethod.OPTIONS, apigatewayv2.CorsHttpMethod.POST
+            ],
+            allow_origins=[static_site_bucket.bucket_website_url],
+            max_age=Duration.days(10)
+            )
         )
+
+
+
 
         #create a dynamodb table for storing blog posts
         blog_post_dynamodb_table = dynamodb.Table(
@@ -94,22 +113,7 @@ class StaticSiteStack(Stack):
             response_types=[authorizers.HttpLambdaResponseType.SIMPLE]
         )
 
-        # Create an HTTP API Gateway
-        http_api = apigatewayv2.HttpApi(
-            self,
-            "StaticSiteBackendHTTPAPI",
-            api_name="staticSiteBackendHTTPAPI",
-            description="This is the backend for the static site using HTTP API Gateway.",
-            cors_preflight=apigatewayv2.CorsPreflightOptions(
-            allow_headers=[
-                "*"
-            ],
-            allow_methods=[apigatewayv2.CorsHttpMethod.GET, apigatewayv2.CorsHttpMethod.OPTIONS, apigatewayv2.CorsHttpMethod.POST
-            ],
-            allow_origins=[static_site_bucket.bucket_website_url],
-            max_age=Duration.days(10)
-            )
-        )
+
 
         api_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/lambda-api")
         lambda_api = lambda_.Function(
@@ -127,7 +131,8 @@ class StaticSiteStack(Stack):
             ],
             environment={
                 "DDB_TABLE_NAME": blog_post_dynamodb_table.table_name,
-                "ENDPOINT": http_api.api_endpoint
+                "ENDPOINT": http_api.api_endpoint,
+                "STATIC_SITE_URL": static_site_bucket.bucket_website_url
             },
             timeout=Duration.seconds(30),
             tracing=lambda_.Tracing.ACTIVE
@@ -145,14 +150,81 @@ class StaticSiteStack(Stack):
             path="/get_posts",
             methods=[apigatewayv2.HttpMethod.GET],
             integration=lambda_integration,
-            authorizer=authorizer
+            # authorizer=authorizer
         )
 
         http_api.add_routes(
             path="/add_post",
             methods=[apigatewayv2.HttpMethod.POST],
             integration=lambda_integration,
-            authorizer=authorizer
+            # authorizer=authorizer
+        )
+
+        #lambda function role
+        lambda_website_creator_role = iam.Role(
+            self,
+            "LambdaWebsiteCreatorRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com")
+        )
+
+        lambda_website_creator_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"))
+
+
+        website_creator_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/website_creator")
+        lambda_website_creator_handler = lambda_.Function(
+            self, 'websiteCreatorLambda',
+            runtime=lambda_.Runtime.PYTHON_3_10,
+            handler='lambda_function.lambda_handler',
+            code=lambda_.Code.from_asset(website_creator_code_location),
+            role=lambda_website_creator_role,
+            timeout=Duration.seconds(30),
+        )
+
+        stage_bucket.grant_read_write(lambda_website_creator_handler)
+
+        # Create Custom Resource
+        provider = custom_resources.Provider(
+            self,
+            "ConfigCustomResourceProvider",
+            on_event_handler=lambda_website_creator_handler
+        )
+
+        custom_resource_lambda = CustomResource(self, "my-cr",
+            service_token=provider.service_token,
+            properties={
+                "ApiUrl": http_api.api_endpoint,
+                "BucketName": stage_bucket.bucket_name,
+                "OtherProperty": "value"
+            }
+        )
+
+        # Deploy static website content to the bucket
+        website_content_path = os.path.join(os.getcwd(), "src/assets/website-content")
+        s3_deployment.BucketDeployment(
+            self, 
+            "DeployWebsite",
+            sources=[s3_deployment.Source.asset(website_content_path)],
+            destination_bucket=static_site_bucket,
+            prune=False
+        )
+
+        # Deploy static website content to the bucket
+        deployment = s3_deployment.BucketDeployment(
+            self, 
+            "DeployConfig",
+            sources=[s3_deployment.Source.bucket(stage_bucket, "config.zip")],
+            destination_bucket=static_site_bucket,
+            prune=False
+        )
+
+        deployment.node.add_dependency(custom_resource_lambda)
+
+        # Output the website URL
+        CfnOutput(
+            self, 
+            "BucketWebsiteURL",
+            value=static_site_bucket.bucket_website_url,
+            description="URL of the static website"
         )
 
         #cfn output for the api gateway

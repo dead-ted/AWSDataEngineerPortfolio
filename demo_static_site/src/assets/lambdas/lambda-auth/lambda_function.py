@@ -6,13 +6,13 @@ def lambda_handler(event: dict[str:Any], context):
     print(event)
     print(context)
 
-    if event['identitySource'] != ['Bearer 88888']:
-        return {
-        "isAuthorized": False,
-        "context": {
-            "exampleKey": "exampleValue"
-          }
-        }
+    # if event['identitySource'] != ['Bearer 88888']:
+    #     return {
+    #     "isAuthorized": False,
+    #     "context": {
+    #         "exampleKey": "exampleValue"
+    #       }
+    #     }
     return {
     "isAuthorized": True,
     "context": {
