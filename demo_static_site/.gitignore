@@ -8,3 +8,6 @@ __pycache__
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+demo_static_site/configs/*
+!demo_static_site/configs/example*
