@@ -35,7 +35,7 @@ class StaticSiteStack(Stack):
             "StaticSiteBucket",
             website_index_document="index.html",
             public_read_access=True,
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=RemovalPolicy.RETAIN,
             block_public_access=s3.BlockPublicAccess(
                 block_public_acls=False,
                 ignore_public_acls=False,
@@ -46,9 +46,9 @@ class StaticSiteStack(Stack):
 
         stage_bucket = s3.Bucket(
             self, 
-            "StageBucket",
+            "StaticSiteStageBucket",
             public_read_access=False,
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=RemovalPolicy.RETAIN,
             block_public_access=s3.BlockPublicAccess(
                 block_public_acls=True,
                 ignore_public_acls=True,
@@ -74,64 +74,56 @@ class StaticSiteStack(Stack):
             )
         )
 
-
-
-
-        #create a dynamodb table for storing blog posts
         blog_post_dynamodb_table = dynamodb.Table(
             self,
-            "BlogPostsTable",
+            "StaticSiteBlogPostsTable",
             partition_key=dynamodb.Attribute(
                 name="post_id",
                 type=dynamodb.AttributeType.STRING
             ),
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=RemovalPolicy.RETAIN,
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
         )
 
-        #lambda function role
-        lambda_auth_role = iam.Role(
-            self,
-            "LambdaAuthRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com")
-        )
+        # lambda_auth_role = iam.Role(
+        #     self,
+        #     "StaticSiteLambdaAuthRole",
+        #     assumed_by=iam.ServicePrincipal("lambda.amazonaws.com")
+        # )
 
-        lambda_auth_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"))
+        # lambda_auth_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"))
 
-        # Define your Lambda authorizer
-        auth_handler_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/lambda-auth")
-        auth_handler = lambda_.Function(
-            self, 'AuthLambda',
-            runtime=lambda_.Runtime.PYTHON_3_10,
-            handler='lambda_function.lambda_handler',
-            code=lambda_.Code.from_asset(auth_handler_code_location),
-            role=lambda_auth_role,
-            timeout=Duration.seconds(30)
-        )
+        # Lambda authorizer
+        # auth_handler_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/lambda-auth")
+        # auth_handler = lambda_.Function(
+        #     self, 'StaticSiteAuthLambda',
+        #     runtime=lambda_.Runtime.PYTHON_3_10,
+        #     handler='lambda_function.lambda_handler',
+        #     code=lambda_.Code.from_asset(auth_handler_code_location),
+        #     role=lambda_auth_role,
+        #     timeout=Duration.seconds(30)
+        # )
 
-        authorizer = authorizers.HttpLambdaAuthorizer("SimpleAuthorizer", auth_handler,
-            response_types=[authorizers.HttpLambdaResponseType.SIMPLE]
-        )
-
-
+        # authorizer = authorizers.HttpLambdaAuthorizer("SimpleAuthorizer", auth_handler,
+        #     response_types=[authorizers.HttpLambdaResponseType.SIMPLE]
+        # )
 
         api_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/lambda-api")
         lambda_api = lambda_.Function(
             self,
-            "LambdaAPI",
+            "StaticSiteLambdaAPI",
             runtime=lambda_.Runtime.PYTHON_3_10,
-            handler="lambda_tdd_v2.lambda_handler",
+            handler="lambda_function.lambda_handler",
             code=lambda_.Code.from_asset(api_code_location),
             layers=[
                 lambda_.LayerVersion.from_layer_version_arn(
                     self, 
-                    "PowertoolsLayer",
-                    "arn:aws:lambda:us-east-1:017000801446:layer:AWSLambdaPowertoolsPythonV2:78"  # Replace with the correct ARN
+                    "StaticSitePowertoolsLayer",
+                    f"arn:aws:lambda:{props.region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:78"
                 )
             ],
             environment={
                 "DDB_TABLE_NAME": blog_post_dynamodb_table.table_name,
-                "ENDPOINT": http_api.api_endpoint,
                 "STATIC_SITE_URL": static_site_bucket.bucket_website_url
             },
             timeout=Duration.seconds(30),
@@ -140,9 +132,8 @@ class StaticSiteStack(Stack):
 
         blog_post_dynamodb_table.grant_read_write_data(lambda_api)
 
-        # Lambda integration
         lambda_integration = integrations.HttpLambdaIntegration(
-            "LambdaIntegration",
+            "StaticSiteLambdaIntegration",
             handler=lambda_api
         )
 
@@ -161,63 +152,60 @@ class StaticSiteStack(Stack):
         )
 
         #lambda function role
-        lambda_website_creator_role = iam.Role(
+        lambda_dynamic_config_creator_role = iam.Role(
             self,
-            "LambdaWebsiteCreatorRole",
+            "StaticSiteLambdaDynamicConfigCreatorRole",
             assumed_by=iam.ServicePrincipal("lambda.amazonaws.com")
         )
 
-        lambda_website_creator_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"))
+        lambda_dynamic_config_creator_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole"))
 
-
-        website_creator_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/website_creator")
-        lambda_website_creator_handler = lambda_.Function(
-            self, 'websiteCreatorLambda',
+        dynamic_config_creator_code_location = os.path.join(os.getcwd(), "src/assets/lambdas/website-dynamic-config-builder")
+        lambda_dynamic_config_creator = lambda_.Function(
+            self, 'StaticSiteDynamicConfigCreatorLambda',
             runtime=lambda_.Runtime.PYTHON_3_10,
             handler='lambda_function.lambda_handler',
-            code=lambda_.Code.from_asset(website_creator_code_location),
-            role=lambda_website_creator_role,
+            code=lambda_.Code.from_asset(dynamic_config_creator_code_location),
+            role=lambda_dynamic_config_creator_role,
             timeout=Duration.seconds(30),
         )
 
-        stage_bucket.grant_read_write(lambda_website_creator_handler)
+        stage_bucket.grant_read_write(lambda_dynamic_config_creator)
 
         # Create Custom Resource
         provider = custom_resources.Provider(
             self,
-            "ConfigCustomResourceProvider",
-            on_event_handler=lambda_website_creator_handler
+            "StaticSiteConfigCustomResourceProvider",
+            on_event_handler=lambda_dynamic_config_creator
         )
 
-        custom_resource_lambda = CustomResource(self, "my-cr",
+        dynamic_config_custom_resource_lambda = CustomResource(self, "StaticSiteDynamicConfigCustomResource",
             service_token=provider.service_token,
             properties={
                 "ApiUrl": http_api.api_endpoint,
                 "BucketName": stage_bucket.bucket_name,
-                "OtherProperty": "value"
+                "dynamic_config_zip_key": props.dynamic_config_zip_key
             }
         )
 
-        # Deploy static website content to the bucket
         website_content_path = os.path.join(os.getcwd(), "src/assets/website-content")
-        s3_deployment.BucketDeployment(
+        website_deployment = s3_deployment.BucketDeployment(
             self, 
-            "DeployWebsite",
+            "StaticSiteDeployWebsite",
             sources=[s3_deployment.Source.asset(website_content_path)],
             destination_bucket=static_site_bucket,
             prune=False
         )
 
-        # Deploy static website content to the bucket
-        deployment = s3_deployment.BucketDeployment(
-            self, 
-            "DeployConfig",
-            sources=[s3_deployment.Source.bucket(stage_bucket, "config.zip")],
+        dynamic_config_deployment = s3_deployment.BucketDeployment(
+            self,
+            "StaticSiteDeployConfig",
+            sources=[s3_deployment.Source.bucket(stage_bucket, props.dynamic_config_zip_key)],
             destination_bucket=static_site_bucket,
             prune=False
         )
 
-        deployment.node.add_dependency(custom_resource_lambda)
+        dynamic_config_deployment.node.add_dependency(dynamic_config_custom_resource_lambda)
 
         # Output the website URL
         CfnOutput(

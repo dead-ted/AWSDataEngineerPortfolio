@@ -1,3 +1,4 @@
 account: "253490751919"
 region: "us-east-1"
 lf_admin_role_arn: "arn:aws:iam::253490751919:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdministratorAccess_301c8f66dd587b8d"
+dynamic_config_zip_key: "config.zip"
