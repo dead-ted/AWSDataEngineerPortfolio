@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 import uuid
 import os
 import boto3
+import json
 from typing import List, Dict, Any
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger, Tracer
@@ -12,8 +13,9 @@ from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 logger = Logger(service="APP")
 tracer = Tracer(service="APP")
 
-ddb_table_name = os.environ['DDB_TABLE_NAME']
-static_site_url = os.environ['STATIC_SITE_URL']
+ddb_table_name = os.environ["DDB_TABLE_NAME"]
+static_site_url = os.environ["STATIC_SITE_URL"]
+user_message_sns_arn = os.environ["USER_MESSAGE_SNS_ARN"]
 
 app = APIGatewayHttpResolver()
 
@@ -29,6 +31,7 @@ else:
         'dynamodb'
     )
 
+sns = boto3.client('sns')
 
 @dataclass
 class Blog_post:
@@ -137,6 +140,31 @@ def get_posts() -> list[Dict[str, str]]:
     
     return extracted_rows
 
+@app.post("/send_message")
+@tracer.capture_method
+def send_message() -> Dict[str, str]:
+    tracer.put_annotation(key="User", value='')
+    logger.info(f"Sending message to sns for delivery")
+
+    print(app.current_event.json_body)
+
+    try:
+        message = {
+            "name": app.current_event.json_body.get('yourName', None),
+            "subject": app.current_event.json_body.get('subject', None),
+            "message": app.current_event.json_body.get('message', None),
+        }
+
+        response = sns.publish(
+            TopicArn=user_message_sns_arn,
+            Message=json.dumps(message),  # Convert dict to JSON string
+            Subject=f"New user message from {app.current_event.json_body.get('yourName', None)}"
+        )
+    
+        return {"status": "success", "message": "Message sent successfully"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST, log_event=True)
 @tracer.capture_lambda_handler
 def lambda_handler(event: dict, context: LambdaContext):
@@ -160,8 +188,8 @@ if __name__ == '__main__':
 
     event = {
         "version": "2.0",
-        "routeKey": "GET /get_posts",
-        "rawPath": "/get_posts",
+        "routeKey": "GET /send_message",
+        "rawPath": "/send_message",
         "rawQueryString": "context=blog&title=NewPost",
         "queryStringParameters": {
         },

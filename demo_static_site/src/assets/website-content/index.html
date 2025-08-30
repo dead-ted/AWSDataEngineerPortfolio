@@ -1,25 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Display Objects in Table</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
-    </head>
-    <body>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabs Example</title>
+<style>
+    .tabs {
+        display: flex;
+        border-bottom: 2px solid #ccc;
+        cursor: pointer;
+    }
+    .tab {
+        padding: 10px 20px;
+        border: 1px solid #ccc;
+        border-bottom: none;
+        background: #f1f1f1;
+        margin-right: 5px;
+    }
+    .tab.active {
+        background: #fff;
+        font-weight: bold;
+    }
+    .tab-content {
+        display: none;
+        padding: 15px;
+        border: 1px solid #ccc;
+        background: #fff;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+</style>
+</head>
+<body>
 
+<div class="tabs">
+    <div class="tab active" onclick="showTab(0)">Message Board</div>
+    <div class="tab" onclick="showTab(1)">Contact Me</div>
+    <div class="tab" onclick="showTab(2)">Tab 3</div>
+</div>
+
+<div class="tab-content active">
     <h2>Posts</h2>
     <table id="posts-table">
         <thead>
@@ -46,106 +78,184 @@
     </div>
     
     <button id="submit-button">Submit</button>
+</div>
+<div class="tab-content">
+    <p style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+        Have a question or feedback? Send me a message below and it will be emailed to me.
+    </p>
 
-    <script>
-        let apiGetUrl = '';
-        let apiPostUrl = '';
-   
-        async function loadConfig() {
-            try {
-                const response = await fetch('config/config.json');
-                if (!response.ok) throw new Error('Failed to load config.json');
-                const config = await response.json();
-                apiGetUrl = `${config.apiUrl}/get_posts`;
-                apiPostUrl = `${config.apiUrl}/add_post`;
-            } catch (err) {
-                console.error('Error loading config:', err);
-            }
+    <div class="form-group-message">
+        <label for="your-name">Your Name:</label>
+        <input type="text" id="your-name" name="your-name" required>
+    </div>
+
+    <div class="form-group-message">
+        <label for="subject">Subject:</label>
+        <input type="text" id="subject" name="subject" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="message">Message:</label>
+        <textarea id="message" name="message" rows="4" required></textarea>
+    </div>
+    
+    <button id="send-message-button">Send Message</button>
+</div>
+<div class="tab-content">
+    <h2>Tab 3 Content</h2>
+    <p>This is the content for tab 3.</p>
+</div>
+
+<script>
+let apiGetUrl = "";
+let apiPostUrl = "";
+let sendMessageUrl = "";
+
+async function loadConfig() {
+    try {
+        const response = await fetch('config/config.json');
+        if (!response.ok) throw new Error('Failed to load config.json');
+        const config = await response.json();
+        apiGetUrl = `${config.apiUrl}/get_posts`;
+        apiPostUrl = `${config.apiUrl}/add_post`;
+        sendMessageUrl = `${config.apiUrl}/send_message`;
+    } catch (err) {
+        console.error('Error loading config:', err);
+    }
+}
+async function fetchData() {
+    try {
+        const apiUrl = apiGetUrl
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer 88888'
+                },
+        });
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
         }
-        async function fetchData() {
-            try {
-                const apiUrl = apiGetUrl
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer 88888'
-                        },
-                });
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data = await response.json();
-                console.log(data)
+        const data = await response.json();
+        console.log(data)
 
-                // Populate the list with the data
-                const tableBody = document.querySelector('#posts-table tbody');
-                //set tableBody contents to no rows
-                tableBody.innerHTML = '';
+        // Populate the list with the data
+        const tableBody = document.querySelector('#posts-table tbody');
+        //set tableBody contents to no rows
+        tableBody.innerHTML = '';
 
-                data.forEach(item => {
-                    // Create a new table row
-                    const row = document.createElement('tr');
+        data.forEach(item => {
+            // Create a new table row
+            const row = document.createElement('tr');
 
-                    // Create table cells for each property
-                    const titleCell = document.createElement('td');
-                    titleCell.textContent = item.title;
+            // Create table cells for each property
+            const titleCell = document.createElement('td');
+            titleCell.textContent = item.title;
 
-                    const contentCell = document.createElement('td');
-                    contentCell.textContent = item.content;
+            const contentCell = document.createElement('td');
+            contentCell.textContent = item.content;
 
-                    // Append cells to the row
-                    row.appendChild(titleCell);
-                    row.appendChild(contentCell);
+            // Append cells to the row
+            row.appendChild(titleCell);
+            row.appendChild(contentCell);
 
-                    // Append the row to the table body
-                    tableBody.appendChild(row);
-                });
-            } catch (error) {
-                console.error('There was a problem with the fetch operation:', error);
+            // Append the row to the table body
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('There was a problem with the fetch operation:', error);
+    }
+}
+
+function showTab(index) {
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+        contents[i].classList.toggle('active', i === index);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadConfig();
+    fetchData();
+
+})
+
+document.getElementById('submit-button').addEventListener('click', async () => {
+        const title = document.getElementById('title').value;
+        const content = document.getElementById('content').value;
+
+        // Prepare the data to send
+        const data = {
+            title: title,
+            content: content
+        };
+
+        // Define the API endpoint
+        const apiEndpoint = apiPostUrl
+
+        try {
+            // Send a POST request to the API
+            const response = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer 88888'
+                },
+                body: JSON.stringify(data)
+            });
+
+            // Check if the response is okay
+            if (response.ok) {
+                fetchData();
+            } else {
+                console.error('Error:', response.statusText);
             }
+        } catch (error) {
+            console.error('Error:', error);
         }
+    })
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            await loadConfig();
-            fetchData();
+document.getElementById("send-message-button").addEventListener("click", async () => {
+        const yourName = document.getElementById("your-name").value;
+        const subject = document.getElementById("subject").value;
+        const message = document.getElementById("message").value;
 
-        })
+        // Prepare the data to send
+        const data = {
+            yourName: yourName,
+            subject: subject,
+            message: message
+        };
 
-        document.getElementById('submit-button').addEventListener('click', async () => {
-                const title = document.getElementById('title').value;
-                const content = document.getElementById('content').value;
+        // Define the API endpoint
+        const apiEndpoint = sendMessageUrl
 
-                // Prepare the data to send
-                const data = {
-                    title: title,
-                    content: content
-                };
+        try {
+            // Send a POST request to the API
+            const response = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer 88888'
+                },
+                body: JSON.stringify(data)
+            });
 
-                // Define the API endpoint
-                const apiEndpoint = apiPostUrl
+            // Check if the response is okay
+            if (response.ok) {
+                // i would like to put some kind of pop up that says the message was sent and then also clears the inputs
+                console.log(response)
+            } else {
+                console.error('Error:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    })
+</script>
 
-                try {
-                    // Send a POST request to the API
-                    const response = await fetch(apiEndpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer 88888'
-                        },
-                        body: JSON.stringify(data)
-                    });
-
-                    // Check if the response is okay
-                    if (response.ok) {
-                        fetchData();
-                    } else {
-                        console.error('Error:', response.statusText);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            })
-    </script>
 </body>
 </html>

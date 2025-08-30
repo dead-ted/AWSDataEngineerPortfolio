@@ -7,6 +7,7 @@ class ApplicationProps:
     region: str
     lf_admin_role_arn: str
     dynamic_config_zip_key: str
+    project_email_address: str
 
 
     def __init__(self, path:str):
@@ -18,3 +19,4 @@ class ApplicationProps:
         self.region = config['region']
         self.lf_admin_role_arn = config['lf_admin_role_arn']
         self.dynamic_config_zip_key = config['dynamic_config_zip_key']
+        self.project_email_address = config['project_email_address']

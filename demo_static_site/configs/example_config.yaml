@@ -1,3 +1,5 @@
 account: "666666666666"
 region: "us-east-1"
 lf_admin_role_arn: "arn:aws:iam::666666666666:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdministratorAccess_301c8f66dd587b8d"
+dynamic_config_zip_key: "config.zip"
+project_email_address: "fake@gmail.com"

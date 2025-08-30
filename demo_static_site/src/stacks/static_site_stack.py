@@ -14,7 +14,9 @@ from aws_cdk import (
     aws_iam as iam,
     custom_resources,
     aws_cloudformation as cfn,
-    CustomResource
+    CustomResource,
+    aws_sns as sns,
+    aws_sns_subscriptions as subscriptions,
 )
 import os
 from constructs import Construct
@@ -55,6 +57,13 @@ class StaticSiteStack(Stack):
                 block_public_policy=True,
                 restrict_public_buckets=True
             )
+        )
+
+
+        user_message_topic = sns.Topic(self, "StaticSiteUserMessagesTopic")
+
+        user_message_topic.add_subscription(
+            subscriptions.EmailSubscription(props.project_email_address)
         )
 
         # Create an HTTP API Gateway
@@ -124,13 +133,15 @@ class StaticSiteStack(Stack):
             ],
             environment={
                 "DDB_TABLE_NAME": blog_post_dynamodb_table.table_name,
-                "STATIC_SITE_URL": static_site_bucket.bucket_website_url
+                "STATIC_SITE_URL": static_site_bucket.bucket_website_url,
+                "USER_MESSAGE_SNS_ARN": user_message_topic.topic_arn
             },
             timeout=Duration.seconds(30),
             tracing=lambda_.Tracing.ACTIVE
         )
 
         blog_post_dynamodb_table.grant_read_write_data(lambda_api)
+        user_message_topic.grant_publish(lambda_api)
 
         lambda_integration = integrations.HttpLambdaIntegration(
             "StaticSiteLambdaIntegration",
@@ -146,6 +157,13 @@ class StaticSiteStack(Stack):
 
         http_api.add_routes(
             path="/add_post",
+            methods=[apigatewayv2.HttpMethod.POST],
+            integration=lambda_integration,
+            # authorizer=authorizer
+        )
+
+        http_api.add_routes(
+            path="/send_message",
             methods=[apigatewayv2.HttpMethod.POST],
             integration=lambda_integration,
             # authorizer=authorizer
