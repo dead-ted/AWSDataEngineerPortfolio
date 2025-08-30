@@ -161,9 +161,9 @@ def send_message() -> Dict[str, str]:
             Subject=f"New user message from {app.current_event.json_body.get('yourName', None)}"
         )
     
-        return {"status": "success", "message": "Message sent successfully"}
+        return {"message": "Message sent successfully"}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"message": str(e)}
 
 @logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST, log_event=True)
 @tracer.capture_lambda_handler

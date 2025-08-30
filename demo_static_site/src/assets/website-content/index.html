@@ -247,7 +247,15 @@ document.getElementById("send-message-button").addEventListener("click", async (
             // Check if the response is okay
             if (response.ok) {
                 // i would like to put some kind of pop up that says the message was sent and then also clears the inputs
-                console.log(response)
+                const result = await response.json();
+                if (result.message == "Message sent successfully"){
+                    alert("Message sent successfully.  Thank you!");
+                    document.getElementById("your-name").value = ""
+                    document.getElementById("subject").value = ""
+                    document.getElementById("message").value = ""
+                } else {
+                    alert("Message failed to send");
+                }
             } else {
                 console.error('Error:', response.statusText);
             }
